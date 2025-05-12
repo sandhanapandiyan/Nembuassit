@@ -1,0 +1,1592 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>SQL Voice Assistant</title>
+    <style>
+        :root {
+            --primary: #FF6B9E; /* Pink accent */
+            --primary-dark: #E0558A;
+            --success: #4CAF50;
+            --warning: #FF9800;
+            --error: #F44336;
+            --background: #FFF5F9; /* Light pink background */
+            --card-bg: #FFFFFF;
+            --text: #333333;
+            --text-light: #777777;
+            --border: #FFD6E5;
+            --user-bubble: #FF6B9E;
+            --bot-bubble: #FFEEF5;
+            --voice-btn: #FF6B9E;
+        }
+
+        * {
+            box-sizing: border-box;
+            margin: 0;
+            padding: 0;
+        }
+
+        body {
+            font-family: 'Comic Neue', cursive, -apple-system, BlinkMacSystemFont, sans-serif;
+            line-height: 1.6;
+            background-color: var(--background);
+            color: var(--text);
+            height: 100vh;
+            display: flex;
+            flex-direction: column;
+        }
+
+        .header {
+            background: linear-gradient(135deg, #FF6B9E 0%, #FF8E53 100%);
+            color: white;
+            padding: 1rem;
+            text-align: center;
+            box-shadow: 0 2px 10px rgba(255, 107, 158, 0.2);
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        h1 {
+            font-size: 1.5rem;
+            font-weight: 700;
+            text-shadow: 1px 1px 2px rgba(0,0,0,0.1);
+        }
+
+        .container {
+            max-width: 1000px;
+            margin: 0 auto;
+            padding: 1rem;
+            flex: 1;
+            display: flex;
+            flex-direction: column;
+            width: 100%;
+        }
+
+        .chat-container {
+            flex: 1;
+            display: flex;
+            flex-direction: column;
+            background-color: var(--card-bg);
+            border-radius: 1rem;
+            box-shadow: 0 4px 15px rgba(255, 107, 158, 0.1);
+            overflow: hidden;
+            position: relative;
+        }
+
+        .chat-messages {
+            flex: 1;
+            padding: 1.5rem;
+            overflow-y: auto;
+            display: flex;
+            flex-direction: column;
+            gap: 1rem;
+            scroll-behavior: smooth;
+        }
+
+        .message {
+            max-width: 85%;
+            padding: 1rem 1.25rem;
+            border-radius: 1.25rem;
+            animation: fadeIn 0.3s ease-out;
+            position: relative;
+            word-wrap: break-word;
+            line-height: 1.5;
+        }
+
+        .user-message {
+            align-self: flex-end;
+            background-color: var(--user-bubble);
+            color: white;
+            border-bottom-right-radius: 0.5rem;
+            box-shadow: 0 2px 5px rgba(255, 107, 158, 0.3);
+        }
+
+        .bot-message {
+            align-self: flex-start;
+            background-color: var(--bot-bubble);
+            color: var(--text);
+            border-bottom-left-radius: 0.5rem;
+            box-shadow: 0 2px 5px rgba(0,0,0,0.05);
+        }
+
+        .typing-indicator {
+            display: inline-block;
+            padding: 1rem 1.25rem;
+            background-color: var(--bot-bubble);
+            border-radius: 1.25rem;
+            border-bottom-left-radius: 0.5rem;
+            align-self: flex-start;
+        }
+
+        .typing-dot {
+            display: inline-block;
+            width: 10px;
+            height: 10px;
+            border-radius: 50%;
+            background-color: var(--primary);
+            margin-right: 6px;
+            animation: typingAnimation 1.4s infinite ease-in-out;
+        }
+
+        .typing-dot:nth-child(1) {
+            animation-delay: 0s;
+        }
+
+        .typing-dot:nth-child(2) {
+            animation-delay: 0.2s;
+        }
+
+        .typing-dot:nth-child(3) {
+            animation-delay: 0.4s;
+            margin-right: 0;
+        }
+
+        .input-area {
+            padding: 1.25rem;
+            border-top: 1px solid var(--border);
+            background-color: var(--card-bg);
+            display: flex;
+            gap: 0.75rem;
+            align-items: center;
+            position: relative;
+        }
+
+        .input-field {
+            flex: 1;
+            padding: 0.9rem 1.25rem;
+            border: 2px solid var(--border);
+            border-radius: 2rem;
+            font-size: 1rem;
+            outline: none;
+            transition: all 0.3s;
+            font-family: 'Comic Neue', cursive;
+            background-color: #FFF;
+        }
+
+        .input-field:focus {
+            border-color: var(--primary);
+            box-shadow: 0 0 0 4px rgba(255, 107, 158, 0.1);
+        }
+
+        .send-btn {
+            background-color: var(--primary);
+            color: white;
+            border: none;
+            border-radius: 50%;
+            width: 3.5rem;
+            height: 3.5rem;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            cursor: pointer;
+            transition: all 0.3s;
+            box-shadow: 0 2px 10px rgba(255, 107, 158, 0.3);
+        }
+
+        .send-btn:hover {
+            background-color: var(--primary-dark);
+            transform: translateY(-2px);
+        }
+
+        .send-btn:disabled {
+            background-color: #FFB6D1;
+            cursor: not-allowed;
+            transform: none;
+        }
+
+        .voice-btn {
+            background-color: var(--voice-btn);
+            color: white;
+            border: none;
+            border-radius: 50%;
+            width: 3.5rem;
+            height: 3.5rem;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            cursor: pointer;
+            transition: all 0.3s;
+            box-shadow: 0 2px 10px rgba(255, 107, 158, 0.3);
+        }
+
+        .voice-btn.listening {
+            background-color: var(--error);
+            animation: pulse 1.5s infinite;
+        }
+
+        .voice-btn:hover {
+            background-color: var(--primary-dark);
+            transform: translateY(-2px);
+        }
+
+        .sql-result {
+            font-family: 'Roboto Mono', monospace;
+            background-color: #FFF;
+            padding: 1rem;
+            border-radius: 0.75rem;
+            margin-top: 0.75rem;
+            overflow-x: auto;
+            white-space: pre-wrap;
+            border: 1px solid var(--border);
+            font-size: 0.9rem;
+        }
+
+        .copy-btn {
+            background-color: var(--primary);
+            color: white;
+            border: none;
+            border-radius: 0.5rem;
+            padding: 0.5rem 1rem;
+            font-size: 0.85rem;
+            margin-top: 0.75rem;
+            cursor: pointer;
+            display: inline-flex;
+            align-items: center;
+            gap: 0.5rem;
+            transition: all 0.2s;
+        }
+
+        .copy-btn:hover {
+            background-color: var(--primary-dark);
+            transform: translateY(-1px);
+        }
+
+        .copy-btn svg {
+            width: 14px;
+            height: 14px;
+        }
+
+        .controls {
+            display: flex;
+            gap: 0.75rem;
+        }
+
+        .voice-feedback {
+            position: absolute;
+            bottom: 6rem;
+            left: 50%;
+            transform: translateX(-50%);
+            background-color: rgba(0, 0, 0, 0.7);
+            color: white;
+            padding: 0.75rem 1.5rem;
+            border-radius: 2rem;
+            display: none;
+            z-index: 10;
+            font-size: 0.9rem;
+            animation: fadeIn 0.3s;
+        }
+
+        .result-table {
+            width: 100%;
+            border-collapse: collapse;
+            margin-top: 1rem;
+            font-family: 'Roboto Mono', monospace;
+            font-size: 0.85rem;
+            border: 1px solid var(--border);
+        }
+
+        .result-table th, .result-table td {
+            border: 1px solid var(--border);
+            padding: 0.75rem;
+            text-align: left;
+        }
+
+        .result-table th {
+            background-color: var(--primary);
+            color: white;
+            font-weight: 500;
+        }
+
+        .result-table tr:nth-child(even) {
+            background-color: #FFF9FC;
+        }
+
+        .operation-badge {
+            display: inline-block;
+            padding: 0.4rem 0.8rem;
+            border-radius: 1rem;
+            font-size: 0.8rem;
+            font-weight: bold;
+            margin-right: 0.75rem;
+        }
+
+        .select-badge {
+            background-color: var(--success);
+            color: white;
+        }
+
+        .modify-badge {
+            background-color: var(--warning);
+            color: white;
+        }
+
+        .error-badge {
+            background-color: var(--error);
+            color: white;
+        }
+
+        /* Form styles */
+        .insert-form {
+            background-color: #FFF;
+            padding: 1.25rem;
+            border-radius: 1rem;
+            margin-top: 1rem;
+            border: 1px solid var(--border);
+        }
+
+        .insert-form h4 {
+            margin-bottom: 0.75rem;
+            color: var(--primary);
+            font-size: 1.1rem;
+            font-weight: 700;
+        }
+
+        .form-group {
+            margin-bottom: 1.25rem;
+        }
+
+        .form-group label {
+            display: block;
+            margin-bottom: 0.5rem;
+            font-weight: 600;
+            color: var(--text);
+        }
+
+        .form-input {
+            width: 100%;
+            padding: 0.75rem;
+            border: 2px solid var(--border);
+            border-radius: 0.75rem;
+            font-family: 'Comic Neue', cursive;
+            font-size: 1rem;
+        }
+
+        .form-input:focus {
+            border-color: var(--primary);
+            outline: none;
+        }
+
+        .submit-form-btn, .execute-btn {
+            background-color: var(--primary);
+            color: white;
+            border: none;
+            padding: 0.75rem 1.5rem;
+            border-radius: 2rem;
+            cursor: pointer;
+            margin-top: 0.5rem;
+            margin-right: 0.75rem;
+            font-family: 'Comic Neue', cursive;
+            font-weight: 600;
+            transition: all 0.3s;
+            display: inline-flex;
+            align-items: center;
+            gap: 0.5rem;
+        }
+
+        .submit-form-btn:hover, .execute-btn:hover {
+            background-color: var(--primary-dark);
+            transform: translateY(-2px);
+            box-shadow: 0 2px 10px rgba(255, 107, 158, 0.3);
+        }
+
+        .execute-btn {
+            background-color: var(--success);
+        }
+
+        .execute-btn:hover {
+            background-color: #3d8b40;
+        }
+
+        .fk-info {
+            font-size: 0.8rem;
+            color: var(--text-light);
+            margin-top: 0.5rem;
+            font-style: italic;
+        }
+
+        .create-dept-link {
+            color: var(--primary);
+            text-decoration: none;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.2s;
+            display: inline-block;
+            margin-top: 0.5rem;
+        }
+
+        .create-dept-link:hover {
+            text-decoration: underline;
+            transform: translateX(2px);
+        }
+
+        .department-select {
+            width: 100%;
+            padding: 0.75rem;
+            border: 2px solid var(--border);
+            border-radius: 0.75rem;
+            font-family: 'Comic Neue', cursive;
+            font-size: 1rem;
+            margin-bottom: 0.75rem;
+            background-color: white;
+        }
+
+        .submit-select-btn {
+            background-color: var(--primary);
+            color: white;
+            border: none;
+            padding: 0.75rem 1.5rem;
+            border-radius: 2rem;
+            cursor: pointer;
+            font-family: 'Comic Neue', cursive;
+            font-weight: 600;
+            transition: all 0.3s;
+        }
+
+        .submit-select-btn:hover {
+            background-color: var(--primary-dark);
+            transform: translateY(-2px);
+        }
+
+        /* Assistant avatar */
+        .assistant-avatar {
+            width: 36px;
+            height: 36px;
+            border-radius: 50%;
+            background-color: var(--primary);
+            color: white;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            margin-right: 0.75rem;
+            flex-shrink: 0;
+            font-weight: bold;
+            box-shadow: 0 2px 5px rgba(255, 107, 158, 0.3);
+        }
+
+        .message-container {
+            display: flex;
+            align-items: flex-start;
+        }
+
+        /* Animations */
+        @keyframes fadeIn {
+            from { opacity: 0; transform: translateY(10px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+
+        @keyframes typingAnimation {
+            0%, 60%, 100% { transform: translateY(0); }
+            30% { transform: translateY(-5px); }
+        }
+
+        @keyframes pulse {
+            0% { transform: scale(1); }
+            50% { transform: scale(1.1); }
+            100% { transform: scale(1); }
+        }
+
+        /* Voice wave animation */
+        .voice-wave {
+            display: flex;
+            align-items: center;
+            gap: 4px;
+            height: 30px;
+        }
+
+        .voice-wave-bar {
+            width: 4px;
+            background-color: white;
+            border-radius: 2px;
+            animation: voiceWave 1.5s infinite ease-in-out;
+        }
+
+        .voice-wave-bar:nth-child(1) {
+            height: 10px;
+            animation-delay: 0.1s;
+        }
+
+        .voice-wave-bar:nth-child(2) {
+            height: 20px;
+            animation-delay: 0.2s;
+        }
+
+        .voice-wave-bar:nth-child(3) {
+            height: 30px;
+            animation-delay: 0.3s;
+        }
+
+        .voice-wave-bar:nth-child(4) {
+            height: 20px;
+            animation-delay: 0.4s;
+        }
+
+        .voice-wave-bar:nth-child(5) {
+            height: 10px;
+            animation-delay: 0.5s;
+        }
+
+        @keyframes voiceWave {
+            0%, 100% { height: 10px; }
+            50% { height: 30px; }
+        }
+
+        /* Responsive styles */
+        @media (max-width: 768px) {
+            .message {
+                max-width: 90%;
+                padding: 0.9rem;
+            }
+
+            .container {
+                padding: 0;
+            }
+
+            .chat-container {
+                border-radius: 0;
+            }
+
+            .input-area {
+                padding: 1rem;
+            }
+
+            .send-btn, .voice-btn {
+                width: 3rem;
+                height: 3rem;
+            }
+        }
+    </style>
+    <link href="https://fonts.googleapis.com/css2?family=Comic+Neue:wght@400;700&family=Roboto+Mono&display=swap" rel="stylesheet">
+</head>
+<body>
+    <div class="header">
+        <h1>SQL Voice Assistant</h1>
+        <div style="display: flex; align-items: center; gap: 1rem;">
+            <button id="voice-toggle" class="voice-btn" title="Toggle Voice">
+                <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                    <path d="M12 1a3 3 0 0 0-3 3v8a3 3 0 0 0 6 0V4a3 3 0 0 0-3-3z"></path>
+                    <path d="M19 10v2a7 7 0 0 1-14 0v-2"></path>
+                    <line x1="12" y1="19" x2="12" y2="23"></line>
+                    <line x1="8" y1="23" x2="16" y2="23"></line>
+                </svg>
+            </button>
+        </div>
+    </div>
+    
+    <div class="container">
+        <div class="chat-container">
+            <div class="chat-messages" id="chat-messages">
+                <!-- Messages will appear here -->
+                <div class="message-container">
+                    <div class="assistant-avatar">AI</div>
+                    <div class="message bot-message">
+                        Hi there! I'm your SQL assistant. You can ask me things like:
+                        <ul style="margin-top: 0.5rem; padding-left: 1.25rem;">
+                            <li>"Add a new employee"</li>
+                            <li>"Create a marketing department"</li>
+                            <li>"Show me all departments"</li>
+                        </ul>
+                        <div class="sql-result" style="margin-top: 0.75rem;" id="schema-info">
+                            <strong>Database Schema:</strong><br>
+                            Loading schema...
+                        </div>
+                        <button class="copy-btn" onclick="copyToClipboard('schema-info')">
+                            <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                                <rect x="9" y="9" width="13" height="13" rx="2" ry="2"></rect>
+                                <path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"></path>
+                            </svg>
+                            Copy Schema
+                        </button>
+                    </div>
+                </div>
+            </div>
+            
+            <div class="voice-feedback" id="voice-feedback">
+                <div class="voice-wave">
+                    <div class="voice-wave-bar"></div>
+                    <div class="voice-wave-bar"></div>
+                    <div class="voice-wave-bar"></div>
+                    <div class="voice-wave-bar"></div>
+                    <div class="voice-wave-bar"></div>
+                </div>
+                Listening... Speak now
+            </div>
+            
+            <div class="input-area">
+                <input type="text" id="user-input" class="input-field" placeholder="Type your query or click mic to speak..." autocomplete="off">
+                <div class="controls">
+                    <button id="voice-btn" class="voice-btn" title="Voice Input">
+                        <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                            <path d="M12 1a3 3 0 0 0-3 3v8a3 3 0 0 0 6 0V4a3 3 0 0 0-3-3z"></path>
+                            <path d="M19 10v2a7 7 0 0 1-14 0v-2"></path>
+                            <line x1="12" y1="19" x2="12" y2="23"></line>
+                            <line x1="8" y1="23" x2="16" y2="23"></line>
+                        </svg>
+                    </button>
+                    <button id="send-btn" class="send-btn" disabled>
+                        <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                            <line x1="22" y1="2" x2="11" y2="13"></line>
+                            <polygon points="22 2 15 22 11 13 2 9 22 2"></polygon>
+                        </svg>
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        document.addEventListener('DOMContentLoaded', function() {
+            const chatMessages = document.getElementById('chat-messages');
+            const userInput = document.getElementById('user-input');
+            const sendBtn = document.getElementById('send-btn');
+            const voiceBtn = document.getElementById('voice-btn');
+            const voiceToggle = document.getElementById('voice-toggle');
+            const voiceFeedback = document.getElementById('voice-feedback');
+            const schemaInfoElement = document.getElementById('schema-info');
+            
+            // Voice settings
+            let voiceEnabled = true;
+            let femaleVoice = null;
+            let synth = window.speechSynthesis;
+            
+            // Speech recognition
+            const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
+            let recognition;
+            
+            if (SpeechRecognition) {
+                recognition = new SpeechRecognition();
+                recognition.continuous = false;
+                recognition.interimResults = false;
+                recognition.lang = 'en-US';
+                
+                recognition.onstart = function() {
+                    voiceBtn.classList.add('listening');
+                    voiceFeedback.style.display = 'flex';
+                };
+                
+                recognition.onend = function() {
+                    voiceBtn.classList.remove('listening');
+                    voiceFeedback.style.display = 'none';
+                };
+                
+                recognition.onresult = function(event) {
+                    const transcript = event.results[0][0].transcript;
+                    userInput.value = transcript;
+                    sendBtn.disabled = false;
+                    speakResponse("Got it!");
+                };
+                
+                recognition.onerror = function(event) {
+                    console.error('Speech recognition error', event.error);
+                    addMessage('bot', `Voice input error: ${event.error}`);
+                    voiceBtn.classList.remove('listening');
+                    voiceFeedback.style.display = 'none';
+                    speakResponse("Oops! I didn't catch that. Could you try again?");
+                };
+            } else {
+                voiceBtn.disabled = true;
+                voiceBtn.title = "Voice input not supported in your browser";
+                console.warn('Speech recognition not supported');
+                addMessage('bot', "Voice input isn't supported in your browser");
+            }
+            
+            // Initialize voices
+            function loadVoices() {
+                const voices = synth.getVoices();
+                // Prefer younger female voices
+                femaleVoice = voices.find(voice => 
+                    (voice.name.includes('Female') || 
+                     voice.name.includes('Woman') || 
+                     voice.name.includes('Zira') || 
+                     voice.name.includes('Tessa') || 
+                     voice.name.includes('Karen') ||
+                     voice.name.includes('Samantha')) &&
+                    !voice.name.includes('Old') &&
+                    !voice.name.includes('Senior')
+                );
+                
+                if (!femaleVoice && voices.length > 0) {
+                    femaleVoice = voices[0];
+                }
+                
+                console.log('Available voices:', voices);
+                console.log('Selected voice:', femaleVoice);
+            }
+            
+            loadVoices();
+            if (synth.onvoiceschanged !== undefined) {
+                synth.onvoiceschanged = loadVoices;
+            }
+            
+            // Toggle voice on/off
+            voiceToggle.addEventListener('click', function() {
+                voiceEnabled = !voiceEnabled;
+                if (voiceEnabled) {
+                    voiceToggle.innerHTML = `
+                        <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                            <path d="M12 1a3 3 0 0 0-3 3v8a3 3 0 0 0 6 0V4a3 3 0 0 0-3-3z"></path>
+                            <path d="M19 10v2a7 7 0 0 1-14 0v-2"></path>
+                            <line x1="12" y1="19" x2="12" y2="23"></line>
+                            <line x1="8" y1="23" x2="16" y2="23"></line>
+                        </svg>
+                    `;
+                    speakResponse("Voice enabled!");
+                } else {
+                    voiceToggle.innerHTML = `
+                        <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                            <path d="M17 6.1H3"></path>
+                            <path d="M21 12.1H3"></path>
+                            <path d="M15.1 18H3"></path>
+                        </svg>
+                    `;
+                    synth.cancel();
+                }
+            });
+            
+            // Enable send button when input has text
+            userInput.addEventListener('input', function() {
+                sendBtn.disabled = this.value.trim() === '';
+            });
+            
+            // Send message on Enter key
+            userInput.addEventListener('keypress', function(e) {
+                if (e.key === 'Enter' && !sendBtn.disabled) {
+                    sendMessage();
+                }
+            });
+            
+            // Send message on button click
+            sendBtn.addEventListener('click', sendMessage);
+            
+            // Voice input button
+            voiceBtn.addEventListener('click', function() {
+                if (voiceBtn.classList.contains('listening')) {
+                    recognition.stop();
+                    return;
+                }
+                
+                if (recognition) {
+                    try {
+                        recognition.start();
+                        speakResponse("I'm listening...");
+                    } catch (error) {
+                        console.error('Speech recognition error:', error);
+                        addMessage('bot', 'Error accessing microphone. Please check permissions.');
+                        speakResponse("I can't access the microphone. Please check permissions.");
+                    }
+                } else {
+                    addMessage('bot', 'Voice input is not supported');
+                }
+            });
+            
+            // Auto-scroll to bottom when new messages are added
+            const observer = new MutationObserver(function() {
+                chatMessages.scrollTop = chatMessages.scrollHeight;
+            });
+            
+            observer.observe(chatMessages, {
+                childList: true,
+                subtree: true
+            });
+            
+            // Load schema on startup
+            loadSchema();
+            
+            
+            // Speak a response
+            function speakResponse(text) {
+                if (!voiceEnabled || !synth) return;
+                
+                if (synth.speaking) {
+                    synth.cancel();
+                }
+                
+                const utterance = new SpeechSynthesisUtterance(text);
+                utterance.rate = 1.1; // Slightly faster
+                utterance.pitch = 1.3; // Higher pitch
+                utterance.volume = 1;
+                
+                // Use the female voice if available
+                if (femaleVoice) {
+                    utterance.voice = femaleVoice;
+                }
+                
+                // Add some expression to the speech
+                if (text.includes('?')) {
+                    utterance.rate = 1.0;
+                    utterance.pitch = 1.4; // Higher pitch for questions
+                } else if (text.includes('!') || text.includes('Okay')) {
+                    utterance.rate = 1.2;
+                    utterance.pitch = 1.5; // Excited tone
+                }
+                
+                synth.speak(utterance);
+            }
+            
+            async function loadSchema() {
+                try {
+                    const response = await fetch('http://localhost:8000/schema');
+                    if (!response.ok) throw new Error('Failed to fetch schema');
+                    
+                    const data = await response.json();
+                    if (data.schema) {
+                        let schemaText = '<strong>Database Schema:</strong><br>';
+                        for (const [table, columns] of Object.entries(data.schema)) {
+                            schemaText += `Table: ${table}<br>`;
+                            columns.forEach(col => {
+                                if (col.column_name && col.data_type) {
+                                    schemaText += `- ${col.column_name} (${col.data_type}`;
+                                    if (!col.is_nullable) schemaText += ' NOT NULL';
+                                    if (col.column_default) schemaText += ` DEFAULT ${col.column_default}`;
+                                    if (col.foreign_key) {
+                                        schemaText += ` → ${col.foreign_key.table}.${col.foreign_key.column}`;
+                                    }
+                                    schemaText += '<br>';
+                                }
+                            });
+                        }
+                        schemaInfoElement.innerHTML = schemaText;
+                        speakResponse("I'm ready to help with your database!");
+                    }
+                } catch (error) {
+                    console.error('Error loading schema:', error);
+                    schemaInfoElement.innerHTML = '<strong>Error loading schema. Please try again.</strong>';
+                    speakResponse("Oops! I couldn't load the database schema.");
+                }
+            }
+            
+            async function sendMessage() {
+                const message = userInput.value.trim();
+                if (!message) return;
+                
+                // Add user message to chat
+                addMessage('user', message);
+                userInput.value = '';
+                sendBtn.disabled = true;
+                
+                // Show typing indicator
+                const typingIndicator = showTypingIndicator();
+                
+                try {
+                    const response = await fetch('http://localhost:8000/query', {
+                        method: 'POST',
+                        headers: {
+                            'Content-Type': 'application/json',
+                            'Accept': 'application/json'
+                        },
+                        body: JSON.stringify({
+                            user_query: message,
+                            previous_context: getPreviousContext()
+                        })
+                    });
+                    
+                    if (!response.ok) {
+                        const errorData = await response.json();
+                        throw new Error(errorData.detail?.message || `HTTP error! Status: ${response.status}`);
+                    }
+                    
+                    const data = await response.json();
+                    
+                    if (data.status === "incomplete") {
+                        // Handle incomplete INSERT statement
+                        removeTypingIndicator(typingIndicator);
+                        if (data.voice_message) {
+                            speakResponse(data.voice_message);
+                        }
+                        await handleIncompleteInsert(data);
+                        return;
+                    }
+                    
+                    if (data.status !== "success") {
+                        throw new Error(data.message || 'Request failed');
+                    }
+                    
+                    // Process the response
+                    removeTypingIndicator(typingIndicator);
+                    if (data.voice_message) {
+                        speakResponse(data.voice_message);
+                    }
+                    displayQueryResults(data);
+                    
+                } catch (error) {
+                    console.error('Error:', error);
+                    removeTypingIndicator(typingIndicator);
+                    
+                    let errorMessage = error.message;
+                    let voiceMessage = "Oops! Something went wrong.";
+                    
+                    try {
+                        const errorData = JSON.parse(error.message);
+                        errorMessage = errorData.message || error.message;
+                        voiceMessage = errorData.voice_message || voiceMessage;
+                    } catch (e) {
+                        // Not JSON
+                    }
+                    
+                    if (errorMessage.includes('violates foreign key constraint')) {
+                        voiceMessage = "Hmm, that reference doesn't exist in the database.";
+                    } else if (errorMessage.includes('violates not-null constraint')) {
+                        voiceMessage = "I think you forgot to provide some required information.";
+                    }
+                    
+                    addMessage('bot', `
+                        <div>
+                            <span class="operation-badge error-badge">ERROR</span>
+                            ${errorMessage}
+                        </div>
+                    `);
+                    
+                    speakResponse(voiceMessage);
+                }
+            }
+            
+            async function handleIncompleteInsert(data) {
+                const { table_name, schema, required_fields, voice_message } = data;
+                
+                // Get field prompts for this table
+                const response = await fetch('http://localhost:8000/field-prompts', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'Accept': 'application/json'
+                    },
+                    body: JSON.stringify({
+                        table_name: table_name,
+                        schema: schema
+                    })
+                });
+                
+                const fieldData = await response.json();
+                const fieldPrompts = fieldData.field_prompts;
+                
+                if (!fieldPrompts) {
+                    addMessage('bot', `Sorry, I couldn't determine the required fields for ${table_name}`);
+                    speakResponse("Oops! I can't figure out what information I need.");
+                    return;
+                }
+                
+                // Start the conversation to collect fields
+                const conversationId = `conv-${Date.now()}`;
+                const fields = Object.keys(fieldPrompts);
+                const values = {};
+                let currentFieldIndex = 0;
+                
+                // Ask for the first field
+                askForField(conversationId, fields, currentFieldIndex, fieldPrompts, values, table_name);
+            }
+            
+            async function askForField(conversationId, fields, index, fieldPrompts, values, table_name, returnContext = null) {
+                if (index >= fields.length) {
+                    // All fields collected, build the query
+                    if (returnContext) {
+                        // This was a department creation flow
+                        const deptId = await createDepartment(values);
+                        if (deptId) {
+                            addMessage('bot', `New department created with ID: ${deptId}`);
+                            speakResponse(`Awesome! The new department was created with ID ${deptId}.`);
+                            
+                            // Return to original flow with the department ID
+                            returnContext.values[returnContext.fields[returnContext.index]] = deptId;
+                            askForField(
+                                returnContext.conversationId,
+                                returnContext.fields,
+                                returnContext.index + 1,
+                                returnContext.fieldPrompts,
+                                returnContext.values,
+                                returnContext.table_name
+                            );
+                        } else {
+                            addMessage('bot', 'Failed to create department. Please try again.');
+                            speakResponse("Oh no! I couldn't create that department. Let's try again.");
+                        }
+                    } else {
+                        buildFinalQuery(values, table_name, fieldPrompts);
+                    }
+                    return;
+                }
+                
+                const field = fields[index];
+                const fieldInfo = fieldPrompts[field];
+                
+                // Special handling for department selection in employee form
+                if (fieldInfo.type === 'department_choice' && table_name === 'employee') {
+                    const deptResponse = await fetch('http://localhost:8000/department-choices');
+                    const deptData = await deptResponse.json();
+                    const departments = deptData.departments || [];
+                    
+                    if (departments.length === 0) {
+                        addMessage('bot', 'No departments available. Please add departments first.');
+                        speakResponse("Hmm, there aren't any departments yet. Let's create one!");
+                        startDepartmentCreation(conversationId, fields, index, fieldPrompts, values, table_name);
+                        return;
+                    }
+                    
+                    // Create department selection dropdown
+                    const promptId = `prompt-${Date.now()}`;
+                    let promptHTML = `
+                        <div id="${promptId}">
+                            <p>${fieldInfo.prompt}</p>
+                            <select class="department-select">
+                                <option value="">Select a department</option>
+                    `;
+                    
+                    departments.forEach(dept => {
+                        promptHTML += `<option value="${dept.id}">${dept.name}</option>`;
+                    });
+                    
+                    promptHTML += `
+                            </select>
+                            <button class="submit-select-btn">
+                                Confirm
+                            </button>
+                            <div style="margin-top: 0.75rem;">
+                                <a href="#" class="create-dept-link">Create new department</a>
+                            </div>
+                        </div>
+                    `;
+                    
+                    addMessage('bot', promptHTML);
+                    speakResponse(fieldInfo.voice_prompt + (deptData.voice_message ? ' ' + deptData.voice_message : ''));
+                    
+                    // Set up selection handler
+                    document.querySelector(`#${promptId} .submit-select-btn`).addEventListener('click', function() {
+                        const select = document.querySelector(`#${promptId} .department-select`);
+                        if (select.value) {
+                            values[field] = select.value;
+                            const selectedDept = select.options[select.selectedIndex].text;
+                            addMessage('user', `Selected: ${selectedDept}`);
+                            speakResponse(`Okay, ${selectedDept} it is!`);
+                            
+                            // Ask for the next field
+                            askForField(conversationId, fields, index + 1, fieldPrompts, values, table_name);
+                        }
+                    });
+                    
+                    // Set up create department link handler
+                    document.querySelector(`#${promptId} .create-dept-link`).addEventListener('click', function(e) {
+                        e.preventDefault();
+                        speakResponse("Let's set up the new department first!");
+                        startDepartmentCreation(conversationId, fields, index, fieldPrompts, values, table_name);
+                    });
+                    
+                    return;
+                }
+                
+                // Normal field handling
+                let prompt = fieldInfo.prompt;
+                let voicePrompt = fieldInfo.voice_prompt || fieldInfo.prompt;
+                
+                // Add format hint for dates
+                if (fieldInfo.type === 'date') {
+                    prompt += ' (e.g., 17 AUG 2000, 2000-08-17)';
+                }
+                
+                // Add max length hint for text fields
+                if (fieldInfo.type === 'text' && fieldInfo.max_length) {
+                    prompt += ` (max ${fieldInfo.max_length} characters)`;
+                    voicePrompt += ` It should be less than ${fieldInfo.max_length} characters.`;
+                }
+                
+                // Add the prompt
+                addMessage('bot', prompt);
+                speakResponse(voicePrompt);
+                
+                // Set up listener for the response
+                const inputField = document.getElementById('user-input');
+                inputField.placeholder = `Enter ${field.replace(/_/g, ' ')}...`;
+                inputField.focus();
+                
+                const handler = async function(e) {
+                    if (e.key === 'Enter') {
+                        const value = inputField.value.trim();
+                        if (value) {
+                            // Validate the input
+                            if (fieldInfo.type === 'date') {
+                                if (!isValidDate(value)) {
+                                    addMessage('bot', 'Please enter a valid date (e.g., 17 AUG 2000, 2000-08-17)');
+                                    speakResponse("That date format doesn't look right. Try something like 'August 17th 2020' or '2020-08-17'");
+                                    return;
+                                }
+                                
+                                // Normalize the date format
+                                const dateResponse = await fetch('http://localhost:8000/normalize-date', {
+                                    method: 'POST',
+                                    headers: {
+                                        'Content-Type': 'application/json',
+                                        'Accept': 'application/json'
+                                    },
+                                    body: JSON.stringify({
+                                        date_string: value
+                                    })
+                                });
+                                
+                                const dateData = await dateResponse.json();
+                                if (!dateData.normalized_date) {
+                                    addMessage('bot', 'Could not understand the date format. Please try again.');
+                                    speakResponse("I'm not sure about that date format. Can you try again?");
+                                    return;
+                                }
+                                
+                                // Store the normalized value
+                                values[field] = dateData.normalized_date;
+                                addMessage('user', `Entered: ${value} (stored as ${dateData.normalized_date})`);
+                                if (dateData.voice_message) {
+                                    speakResponse(dateData.voice_message);
+                                }
+                            } 
+                            // Handle number validation
+                            else if (fieldInfo.type === 'number' && isNaN(value)) {
+                                addMessage('bot', 'Please enter a valid number');
+                                speakResponse("That doesn't look like a number to me. Try again?");
+                                return;
+                            }
+                            // Handle text length validation
+                            else if (fieldInfo.type === 'text' && fieldInfo.max_length && value.length > fieldInfo.max_length) {
+                                addMessage('bot', `Value too long (max ${fieldInfo.max_length} characters)`);
+                                speakResponse(`Oops! That's too long. It needs to be less than ${fieldInfo.max_length} characters.`);
+                                return;
+                            }
+                            else {
+                                // Store regular values
+                                values[field] = value;
+                                addMessage('user', value);
+                                speakResponse("Got it!");
+                            }
+                            
+                            inputField.value = '';
+                            inputField.placeholder = 'Type your query or click mic to speak...';
+                            
+                            // Remove this event listener
+                            document.removeEventListener('keypress', handler);
+                            
+                            // Ask for the next field
+                            askForField(conversationId, fields, index + 1, fieldPrompts, values, table_name);
+                        }
+                    }
+                };
+                
+                document.addEventListener('keypress', handler);
+            }
+            
+            async function startDepartmentCreation(conversationId, fields, index, fieldPrompts, values, table_name) {
+                // First get the department field prompts
+                const response = await fetch('http://localhost:8000/field-prompts', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'Accept': 'application/json'
+                    },
+                    body: JSON.stringify({
+                        table_name: 'department',
+                        schema: fieldPrompts._schema
+                    })
+                });
+                
+                const deptFieldData = await response.json();
+                const deptFieldPrompts = deptFieldData.field_prompts;
+                
+                if (!deptFieldPrompts) {
+                    addMessage('bot', 'Sorry, I could not start department creation.');
+                    speakResponse("Oops! I can't start department creation right now.");
+                    return;
+                }
+                
+                // Store current context
+                const currentContext = {
+                    conversationId,
+                    fields,
+                    index,
+                    fieldPrompts,
+                    values,
+                    table_name
+                };
+                
+                // Start collecting department info
+                addMessage('bot', 'Please provide details for the new department:');
+                speakResponse("Let's set up the new department! What should we call it?");
+                askForField(
+                    'dept-creation-' + Date.now(),
+                    Object.keys(deptFieldPrompts),
+                    0,
+                    deptFieldPrompts,
+                    {},
+                    'department',
+                    currentContext
+                );
+            }
+            
+            async function createDepartment(deptValues) {
+                try {
+                    // Build the INSERT query
+                    const columns = Object.keys(deptValues).join(', ');
+                    const values = Object.values(deptValues).map(v => `'${v.replace(/'/g, "''")}'`).join(', ');
+                    const query = `INSERT INTO department (${columns}) VALUES (${values}) RETURNING dept_id`;
+                    
+                    const response = await fetch('http://localhost:8000/execute', {
+                        method: 'POST',
+                        headers: {
+                            'Content-Type': 'application/json',
+                            'Accept': 'application/json'
+                        },
+                        body: JSON.stringify({
+                            query: query
+                        })
+                    });
+                    
+                    if (!response.ok) throw new Error('Department creation failed');
+                    const data = await response.json();
+                    
+                    if (data.data && data.data[0]) {
+                        return data.data[0][0]; // Return the new department ID
+                    }
+                    return null;
+                } catch (error) {
+                    console.error('Department creation error:', error);
+                    return null;
+                }
+            }
+            
+            function buildFinalQuery(values, table_name, fieldPrompts) {
+                // Build the INSERT query
+                const columns = Object.keys(values).join(', ');
+                const valuePlaceholders = Object.values(values).map(v => {
+                    if (v === null || v === 'NULL') return 'NULL';
+                    if (typeof v === 'number') return v;
+                    return `'${v.replace(/'/g, "''")}'`;
+                }).join(', ');
+                
+                const completeQuery = `INSERT INTO ${table_name} (${columns}) VALUES (${valuePlaceholders})`;
+                
+                // Show the complete query to user
+                addMessage('bot', `Here's the complete query we'll execute:`);
+                const queryId = `query-${Date.now()}`;
+                addMessage('bot', `
+                    <div class="sql-result" id="${queryId}">
+                        ${completeQuery}
+                    </div>
+                    <button class="copy-btn" onclick="copyToClipboard('${queryId}')">
+                        <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                            <rect x="9" y="9" width="13" height="13" rx="2" ry="2"></rect>
+                            <path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"></path>
+                        </svg>
+                        Copy SQL
+                    </button>
+                    <button class="execute-btn" onclick="executeQuery('${encodeURIComponent(completeQuery)}')">
+                        <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                            <polygon points="5 3 19 12 5 21 5 3"></polygon>
+                        </svg>
+                        Execute
+                    </button>
+                `);
+                
+                speakResponse("Alright, I've prepared the query. Ready when you are!");
+            }
+            
+            async function executeQuery(query) {
+                query = decodeURIComponent(query);
+                
+                // Show typing indicator
+                const typingIndicator = showTypingIndicator();
+                speakResponse("Working on it...");
+                
+                try {
+                    const response = await fetch('http://localhost:8000/execute', {
+                        method: 'POST',
+                        headers: {
+                            'Content-Type': 'application/json',
+                            'Accept': 'application/json'
+                        },
+                        body: JSON.stringify({
+                            query: query
+                        })
+                    });
+                    
+                    if (!response.ok) {
+                        const errorData = await response.json();
+                        throw new Error(JSON.stringify(errorData));
+                    }
+                    
+                    const data = await response.json();
+                    removeTypingIndicator(typingIndicator);
+                    
+                    if (data.voice_message) {
+                        speakResponse(data.voice_message);
+                    }
+                    
+                    // Display execution results
+                    const badgeClass = data.type === "SELECT" ? "select-badge" : "modify-badge";
+                    
+                    if (data.type === "SELECT") {
+                        addMessage('bot', `
+                            <div>
+                                <span class="operation-badge ${badgeClass}">${data.type}</span>
+                                Returned ${data.row_count} rows in ${data.execution_time.toFixed(2)}s
+                            </div>
+                        `);
+                        
+                        // Create table for results if there are any
+                        if (data.row_count > 0) {
+                            let tableHtml = `<table class="result-table"><thead><tr>`;
+                            data.columns.forEach(col => {
+                                tableHtml += `<th>${col}</th>`;
+                            });
+                            tableHtml += `</tr></thead><tbody>`;
+                            
+                            data.data.forEach(row => {
+                                tableHtml += `<tr>`;
+                                row.forEach(cell => {
+                                    tableHtml += `<td>${cell !== null ? cell : 'NULL'}</td>`;
+                                });
+                                tableHtml += `</tr>`;
+                            });
+                            
+                            tableHtml += `</tbody></table>`;
+                            addMessage('bot', tableHtml);
+                        }
+                    } else {
+                        // For non-SELECT operations
+                        addMessage('bot', `
+                            <div>
+                                <span class="operation-badge ${badgeClass}">${data.type}</span>
+                                ${data.row_count} rows affected in ${data.execution_time.toFixed(2)}s
+                            </div>
+                            <div style="margin-top: 0.5rem;">${data.message}</div>
+                        `);
+                    }
+                    
+                } catch (error) {
+                    removeTypingIndicator(typingIndicator);
+                    
+                    let errorMessage = error.message;
+                    let voiceMessage = "Oops! Something went wrong.";
+                    
+                    try {
+                        const errorData = JSON.parse(error.message);
+                        errorMessage = errorData.message || error.message;
+                        voiceMessage = errorData.voice_message || voiceMessage;
+                    } catch (e) {
+                        // Not JSON
+                    }
+                    
+                    addMessage('bot', `
+                        <div>
+                            <span class="operation-badge error-badge">ERROR</span>
+                            ${errorMessage}
+                        </div>
+                    `);
+                    
+                    speakResponse(voiceMessage);
+                }
+            }
+            
+            function getPreviousContext() {
+                // Extract previous messages for context
+                const messages = Array.from(chatMessages.querySelectorAll('.message'));
+                return messages
+                    .filter(msg => msg.classList.contains('user-message') || msg.classList.contains('bot-message'))
+                    .map(msg => {
+                        return {
+                            role: msg.classList.contains('user-message') ? 'user' : 'bot',
+                            content: msg.textContent
+                        };
+                    });
+            }
+            async function handleIncompleteInsert(data) {
+    const { table_name, schema } = data;
+    
+    try {
+        // Get field prompts for this table
+        const response = await fetch('/field-prompts', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+                'Accept': 'application/json'
+            },
+            body: JSON.stringify({
+                table_name: table_name,
+                schema: schema
+            })
+        });
+        
+        if (!response.ok) throw new Error('Failed to get field prompts');
+        
+        const fieldData = await response.json();
+        const fieldPrompts = fieldData.field_prompts;
+        
+        if (!fieldPrompts) {
+            throw new Error(`No field prompts for table ${table_name}`);
+        }
+        
+        // Start the conversation to collect fields
+        const conversationId = `conv-${Date.now()}`;
+        const fields = Object.keys(fieldPrompts);
+        const values = {};
+        
+        if (fields.length === 0) {
+            addMessage('bot', `No required fields found for ${table_name}`);
+            speakResponse(`Hmm, I can't find any required fields for ${table_name}.`);
+            return;
+        }
+        
+        // Ask for the first field
+        askForField(conversationId, fields, 0, fieldPrompts, values, table_name);
+        
+    } catch (error) {
+        console.error('Error handling incomplete insert:', error);
+        addMessage('bot', `Sorry, I couldn't determine the required fields for ${table_name}`);
+        speakResponse("Oops! I'm having trouble figuring out what information I need.");
+    }
+}
+            
+            function displayQueryResults(data) {
+                const { generated_query, execution_result } = data;
+                
+                // Display the generated SQL
+                addMessage('bot', `Generated SQL query:`);
+                const sqlMessageId = 'sql-' + Date.now();
+                addMessage('bot', `<div class="sql-result" id="${sqlMessageId}">${generated_query}</div>
+                                    <button class="copy-btn" onclick="copyToClipboard('${sqlMessageId}')">
+                                        <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                                            <rect x="9" y="9" width="13" height="13" rx="2" ry="2"></rect>
+                                            <path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"></path>
+                                        </svg>
+                                        Copy SQL
+                                    </button>`);
+                
+                // Display execution results
+                const badgeClass = execution_result.type === "SELECT" ? "select-badge" : "modify-badge";
+                
+                if (execution_result.type === "SELECT") {
+                    addMessage('bot', `
+                        <div>
+                            <span class="operation-badge ${badgeClass}">${execution_result.type}</span>
+                            Returned ${execution_result.row_count} rows in ${execution_result.execution_time.toFixed(2)}s
+                        </div>
+                    `);
+                    
+                    // Create table for results if there are any
+                    if (execution_result.row_count > 0) {
+                        let tableHtml = `<table class="result-table"><thead><tr>`;
+                        execution_result.columns.forEach(col => {
+                            tableHtml += `<th>${col}</th>`;
+                        });
+                        tableHtml += `</tr></thead><tbody>`;
+                        
+                        execution_result.data.forEach(row => {
+                            tableHtml += `<tr>`;
+                            row.forEach(cell => {
+                                tableHtml += `<td>${cell !== null ? cell : 'NULL'}</td>`;
+                            });
+                            tableHtml += `</tr>`;
+                        });
+                        
+                        tableHtml += `</tbody></table>`;
+                        addMessage('bot', tableHtml);
+                    }
+                } else {
+                    // For non-SELECT operations
+                    addMessage('bot', `
+                        <div>
+                            <span class="operation-badge ${badgeClass}">${execution_result.type}</span>
+                            ${execution_result.row_count} rows affected in ${execution_result.execution_time.toFixed(2)}s
+                        </div>
+                        <div style="margin-top: 0.5rem;">${execution_result.message}</div>
+                    `);
+                }
+            }
+            
+            function showTypingIndicator() {
+                const typingDiv = document.createElement('div');
+                typingDiv.className = 'typing-indicator';
+                typingDiv.innerHTML = `
+                    <span class="typing-dot"></span>
+                    <span class="typing-dot"></span>
+                    <span class="typing-dot"></span>
+                `;
+                chatMessages.appendChild(typingDiv);
+                return typingDiv;
+            }
+            
+            function removeTypingIndicator(typingElement) {
+                if (typingElement && typingElement.parentNode) {
+                    typingElement.parentNode.removeChild(typingElement);
+                }
+            }
+            
+            function addMessage(sender, content) {
+                const messageContainer = document.createElement('div');
+                messageContainer.className = 'message-container';
+                
+                if (sender === 'bot') {
+                    const avatar = document.createElement('div');
+                    avatar.className = 'assistant-avatar';
+                    avatar.textContent = 'AI';
+                    messageContainer.appendChild(avatar);
+                }
+                
+                const messageDiv = document.createElement('div');
+                messageDiv.className = `message ${sender}-message`;
+                
+                if (typeof content === 'string' && content.startsWith('<')) {
+                    messageDiv.innerHTML = content;
+                } else {
+                    messageDiv.textContent = content;
+                }
+                
+                messageContainer.appendChild(messageDiv);
+                chatMessages.appendChild(messageContainer);
+            }
+        });
+        
+        function isValidDate(dateString) {
+            const formats = [
+                /^\d{4}-\d{2}-\d{2}$/,  // YYYY-MM-DD
+                /^\d{2} [A-Za-z]{3} \d{4}$/,  // 17 AUG 2000
+                /^\d{2}-[A-Za-z]{3}-\d{4}$/,  // 17-AUG-2000
+                /^\d{2}\/\d{2}\/\d{4}$/,  // 17/08/2000
+                /^\d{2}\.\d{2}\.\d{4}$/,  // 17.08.2000
+                /^[A-Za-z]{3} \d{2}, \d{4}$/,  // Aug 17, 2000
+                /^\d{2} [A-Za-z]+ \d{4}$/  // 17 August 2000
+            ];
+            
+            return formats.some(format => format.test(dateString));
+        }
+        
+        function copyToClipboard(elementId) {
+            const element = document.getElementById(elementId);
+            if (!element) return;
+            
+            const range = document.createRange();
+            range.selectNode(element);
+            window.getSelection().removeAllRanges();
+            window.getSelection().addRange(range);
+            
+            try {
+                document.execCommand('copy');
+                
+                // Show copied feedback
+                const buttons = element.parentNode.querySelectorAll('button');
+                buttons.forEach(button => {
+                    if (button.textContent.includes('Copy')) {
+                        const originalText = button.innerHTML;
+                        button.innerHTML = `
+                            <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                                <path d="M20 6L9 17l-5-5"></path>
+                            </svg>
+                            Copied!
+                        `;
+                        setTimeout(() => {
+                            button.innerHTML = originalText;
+                        }, 2000);
+                    }
+                });
+            } catch (err) {
+                console.error('Failed to copy text: ', err);
+            }
+            
+            window.getSelection().removeAllRanges();
+        }
+    </script>
+</body>
+</html>
