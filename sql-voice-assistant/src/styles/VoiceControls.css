@@ -1,0 +1,195 @@
+.voice-controls {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  position: relative;
+}
+
+.voice-btn {
+  background: linear-gradient(135deg, #2b7eff 0%, #1a6eeb 100%);
+  color: white;
+  border: none;
+  border-radius: 50%;
+  width: 3.75rem;
+  height: 3.75rem;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  transition: all 0.3s ease;
+  box-shadow: 0 4px 15px rgba(43, 126, 255, 0.3);
+  position: relative;
+  overflow: hidden;
+}
+
+.voice-btn-content {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+}
+
+.voice-label {
+  font-size: 0.95rem;
+  font-weight: 500;
+  letter-spacing: 0.3px;
+  white-space: nowrap;
+}
+
+.voice-btn::before {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background: radial-gradient(circle at center, rgba(255,255,255,0.2) 0%, transparent 70%);
+  opacity: 0;
+  transition: opacity 0.3s;
+}
+
+.voice-btn:hover::before {
+  opacity: 1;
+}
+
+.voice-btn.listening {
+  background: linear-gradient(135deg, #ff4757 0%, #ff6b7a 100%);
+  animation: pulseListening 2s infinite;
+  box-shadow: 0 4px 15px rgba(255, 71, 87, 0.4);
+}
+
+.voice-btn:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 6px 20px rgba(43, 126, 255, 0.4);
+  background: linear-gradient(135deg, #3385ff 0%, #2b7eff 100%);
+}
+
+.voice-btn:active {
+  transform: translateY(1px);
+  box-shadow: 0 2px 10px rgba(43, 126, 255, 0.3);
+}
+
+.voice-btn:disabled {
+  background-color: #a8c6ff;
+  cursor: not-allowed;
+  transform: none;
+  box-shadow: 0 2px 8px rgba(43, 126, 255, 0.2);
+}
+
+.voice-btn svg {
+  width: 1.5rem;
+  height: 1.5rem;
+  flex-shrink: 0;
+  transition: transform 0.3s;
+}
+
+.voice-btn:hover svg {
+  transform: scale(1.1);
+}
+
+.voice-feedback {
+  position: absolute;
+  top: calc(100% + 0.75rem);
+  left: 50%;
+  transform: translateX(-50%);
+  background: rgba(0, 0, 0, 0.85);
+  color: white;
+  padding: 0.75rem 1.25rem;
+  border-radius: 1rem;
+  font-size: 0.9rem;
+  white-space: nowrap;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 0.25rem;
+  animation: fadeInUp 0.3s ease-out;
+  box-shadow: 0 4px 15px rgba(0, 0, 0, 0.2);
+  z-index: 1000;
+}
+
+.voice-status {
+  font-weight: 500;
+}
+
+.voice-tip {
+  font-size: 0.8rem;
+  opacity: 0.8;
+}
+
+.voice-wave {
+  position: absolute;
+  bottom: -0.75rem;
+  left: 50%;
+  transform: translateX(-50%);
+  display: flex;
+  align-items: center;
+  gap: 2px;
+  height: 12px;
+}
+
+.voice-wave-bar {
+  width: 2px;
+  background-color: white;
+  border-radius: 2px;
+  animation: soundWave 1s infinite ease-in-out;
+}
+
+.voice-wave-bar:nth-child(1) { height: 6px; animation-delay: 0.1s; }
+.voice-wave-bar:nth-child(2) { height: 9px; animation-delay: 0.2s; }
+.voice-wave-bar:nth-child(3) { height: 12px; animation-delay: 0.3s; }
+.voice-wave-bar:nth-child(4) { height: 9px; animation-delay: 0.4s; }
+.voice-wave-bar:nth-child(5) { height: 6px; animation-delay: 0.5s; }
+
+@keyframes voiceWave {
+  0%, 100% { height: 12px; opacity: 0.6; }
+  50% { height: 32px; opacity: 1; }
+}
+
+@keyframes pulse {
+  0% { transform: scale(1); opacity: 1; }
+  50% { transform: scale(1.1); opacity: 0.8; }
+  100% { transform: scale(1); opacity: 1; }
+}
+
+@keyframes pulseListening {
+  0% { box-shadow: 0 4px 15px rgba(255, 71, 87, 0.4); }
+  50% { box-shadow: 0 4px 25px rgba(255, 71, 87, 0.6); }
+  100% { box-shadow: 0 4px 15px rgba(255, 71, 87, 0.4); }
+}
+
+@keyframes soundWave {
+  0%, 100% { transform: scaleY(0.6); opacity: 0.6; }
+  50% { transform: scaleY(1); opacity: 1; }
+}
+
+@keyframes fadeIn {
+  from { opacity: 0; transform: translate(-50%, 10px); }
+  to { opacity: 1; transform: translate(-50%, 0); }
+}
+
+@keyframes fadeInUp {
+  from { 
+    opacity: 0;
+    transform: translate(-50%, 10px);
+  }
+  to { 
+    opacity: 1;
+    transform: translate(-50%, 0);
+  }
+}
+
+@media (max-width: 768px) {
+  .voice-btn {
+    width: 3.25rem;
+    height: 3.25rem;
+  }
+  
+  .microphone-icon {
+    width: 1.75rem;
+    height: 1.75rem;
+  }
+  
+  .voice-feedback {
+    font-size: 0.85rem;
+    padding: 0.6rem 1rem;
+  }
+}
